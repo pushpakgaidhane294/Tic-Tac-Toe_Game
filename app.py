@@ -1,15 +1,12 @@
 import streamlit as st
 import random
 
-# Page config
+# ---------- PAGE CONFIG ----------
 st.set_page_config(page_title="Tic Tac Toe AI", layout="centered")
 
-# ---------- CUSTOM CSS ----------
+# ---------- CSS (UI DESIGN) ----------
 st.markdown("""
 <style>
-body {
-    background-color: #0f172a;
-}
 .title {
     text-align: center;
     font-size: 40px;
@@ -38,10 +35,14 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- INIT ----------
+# ---------- SESSION STATE INIT (VERY IMPORTANT FIX) ----------
 if "board" not in st.session_state:
     st.session_state.board = [""] * 9
+
+if "game_over" not in st.session_state:
     st.session_state.game_over = False
+
+if "winner" not in st.session_state:
     st.session_state.winner = None
 
 # ---------- FUNCTIONS ----------
@@ -60,13 +61,13 @@ def ai_move():
     available = [i for i in range(9) if st.session_state.board[i] == ""]
     return random.choice(available) if available else None
 
-# ---------- TITLE ----------
+# ---------- UI ----------
 st.markdown('<div class="title">🎮 Tic Tac Toe AI</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub">You: ❌ &nbsp;&nbsp; | &nbsp;&nbsp; AI: ⭕</div>', unsafe_allow_html=True)
 
 st.write("")
 
-# ---------- BOARD ----------
+# ---------- GAME BOARD ----------
 cols = st.columns(3)
 
 for i in range(9):
@@ -85,7 +86,7 @@ for i in range(9):
                         st.session_state.board[ai_index] = "O"
                     result = check_winner(st.session_state.board)
 
-                # Check result
+                # Result check
                 if result:
                     st.session_state.game_over = True
                     st.session_state.winner = result
