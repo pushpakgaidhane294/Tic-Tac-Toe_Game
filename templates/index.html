@@ -1,93 +1,174 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Tic Tac Toe Pro</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tic Tac Toe — Cosmic Edition</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@600;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
 
-<h1>🎮 Tic Tac Toe Pro</h1>
+<div class="bg"></div>
+<div class="orb o1"></div>
+<div class="orb o2"></div>
+<div class="orb o3"></div>
+<canvas id="cv"></canvas>
 
-<div class="controls">
-    <input type="text" id="player1" placeholder="Player 1 Name">
-    <input type="text" id="player2" placeholder="Player 2 / Computer">
+<!-- SCREEN 1 -->
+<div class="screen active" id="sMode">
+  <div class="card">
+    <div class="hdr">
+      <div class="title">TIC TAC TOE</div>
+      <div class="badge">✨ Cosmic Edition ✨</div>
+    </div>
 
-    <select id="mode">
-        <option value="ai">Vs Computer 🤖</option>
-        <option value="multiplayer">Multiplayer 👥</option>
-    </select>
+    <div class="mode-btns">
+      <div class="mode-btn ai-btn" id="btnAI">
+        <div class="mode-icon">🤖</div>
+        <div class="mode-name">VS AI</div>
+      </div>
 
-    <button onclick="startGame()">Start Game</button>
+      <div class="mode-btn" id="btnFriend">
+        <div class="mode-icon">👥</div>
+        <div class="mode-name">VS FRIEND</div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<h2 id="turn"></h2>
-<h3 id="scoreboard">Score → X: 0 | O: 0 | Draw: 0</h3>
+<!-- SCREEN 2 -->
+<div class="screen" id="sNames">
+  <div class="card">
 
-<div id="board"></div>
+    <input class="name-input" id="nameX" placeholder="Player X Name"/>
+    <input class="name-input" id="nameO" placeholder="Player O Name"/>
 
-<h2 id="result"></h2>
+    <button class="btn" id="startBtn">START GAME</button>
+  </div>
+</div>
 
-<button onclick="startGame()">🔄 Restart</button>
+<!-- SCREEN 3 -->
+<div class="screen" id="sGame">
+  <div class="card">
+
+    <h2 id="st"></h2>
+
+    <div class="board" id="board">
+      <div class="cell" data-i="0"></div>
+      <div class="cell" data-i="1"></div>
+      <div class="cell" data-i="2"></div>
+      <div class="cell" data-i="3"></div>
+      <div class="cell" data-i="4"></div>
+      <div class="cell" data-i="5"></div>
+      <div class="cell" data-i="6"></div>
+      <div class="cell" data-i="7"></div>
+      <div class="cell" data-i="8"></div>
+    </div>
+
+    <div id="result"></div>
+
+    <button class="btn" onclick="initRound()">Restart</button>
+
+  </div>
+</div>
 
 <script>
-let boardDiv = document.getElementById("board");
-let mode = "ai";
-let player1 = "Player 1";
-let player2 = "Player 2";
+let mode="ai";
+let nameX="Player X";
+let nameO="AI";
+let board=[];
+let turn="X";
+let over=false;
 
-function startGame() {
-    player1 = document.getElementById("player1").value || "Player 1";
-    player2 = document.getElementById("player2").value || "Computer";
-    mode = document.getElementById("mode").value;
+const cells=document.querySelectorAll(".cell");
 
-    fetch("/start", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({mode: mode})
-    })
-    .then(res => res.json())
-    .then(data => {
-        drawBoard(data.board);
-        document.getElementById("result").innerText = "";
-        updateScore(data.scores);
-    });
+document.getElementById("btnAI").onclick=()=>{
+  mode="ai";
+  document.getElementById("nameO").value="AI";
+  goTo("names");
+};
+
+document.getElementById("btnFriend").onclick=()=>{
+  mode="friend";
+  goTo("names");
+};
+
+document.getElementById("startBtn").onclick=()=>{
+  nameX=document.getElementById("nameX").value||"Player X";
+  nameO=mode==="ai"?"AI":(document.getElementById("nameO").value||"Player O");
+  goTo("game");
+  initRound();
+};
+
+function goTo(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById("s"+id.charAt(0).toUpperCase()+id.slice(1)).classList.add("active");
 }
 
-function drawBoard(board) {
-    boardDiv.innerHTML = "";
-    board.forEach((cell, i) => {
-        let btn = document.createElement("button");
-        btn.innerText = cell;
-        btn.onclick = () => makeMove(i);
-        boardDiv.appendChild(btn);
-    });
+function initRound(){
+  board=Array(9).fill("");
+  over=false;
+  turn="X";
+  cells.forEach(c=>c.innerText="");
+  updateStatus();
+
+  if(mode==="ai") aiMove();
 }
 
-function makeMove(i) {
-    fetch("/move", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({move: i})
-    })
-    .then(res => res.json())
-    .then(data => {
-        drawBoard(data.board);
-        updateScore(data.scores);
-
-        if (data.winner) {
-            let name = data.winner === "X" ? player1 : player2;
-            document.getElementById("result").innerText =
-                data.winner === "Draw" ? "🤝 Draw Game" : "🏆 Winner: " + name;
-        } else {
-            let turnName = data.current === "X" ? player1 : player2;
-            document.getElementById("turn").innerText = "Turn: " + turnName;
-        }
-    });
+function updateStatus(){
+  document.getElementById("st").innerText =
+    turn==="X"?nameX+"'s Turn":nameO+"'s Turn";
 }
 
-function updateScore(scores) {
-    document.getElementById("scoreboard").innerText =
-        `Score → X: ${scores.X} | O: ${scores.O} | Draw: ${scores.draw}`;
+cells.forEach(cell=>{
+  cell.onclick=()=>{
+    let i=cell.dataset.i;
+    if(over||board[i])return;
+
+    board[i]=turn;
+    cell.innerText=turn;
+
+    if(checkWin(turn)){
+      endGame(turn);
+      return;
+    }
+
+    turn = turn==="X"?"O":"X";
+    updateStatus();
+
+    if(mode==="ai" && turn==="X"){
+      setTimeout(aiMove,500);
+    }
+  };
+});
+
+function aiMove(){
+  let empty=board.map((v,i)=>v===""?i:null).filter(v=>v!==null);
+  let move=empty[Math.floor(Math.random()*empty.length)];
+  board[move]="X";
+  cells[move].innerText="X";
+
+  if(checkWin("X")){
+    endGame("X");
+    return;
+  }
+
+  turn="O";
+  updateStatus();
+}
+
+function checkWin(p){
+  const wins=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  return wins.some(w=>w.every(i=>board[i]===p));
+}
+
+function endGame(w){
+  over=true;
+  let name = w==="X"?nameX:nameO;
+  document.getElementById("result").innerText = "Winner: "+name;
 }
 </script>
 
