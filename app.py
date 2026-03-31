@@ -1,140 +1,105 @@
 import streamlit as st
-import numpy as np
 import random
-import pickle
-import os
 
-# Q-table
-Q = {}
+# Page config
+st.set_page_config(page_title="Tic Tac Toe AI", layout="centered")
 
-# Hyperparameters
-alpha = 0.1
-gamma = 0.9
-epsilon = 0.2
+# ---------- CUSTOM CSS ----------
+st.markdown("""
+<style>
+body {
+    background-color: #0f172a;
+}
+.title {
+    text-align: center;
+    font-size: 40px;
+    color: #38bdf8;
+    font-weight: bold;
+}
+.sub {
+    text-align: center;
+    color: white;
+    font-size: 18px;
+}
+.stButton>button {
+    height: 80px;
+    width: 80px;
+    font-size: 28px;
+    border-radius: 12px;
+    background-color: #1e293b;
+    color: white;
+    border: 2px solid #38bdf8;
+}
+.result {
+    text-align:center;
+    font-size:22px;
+    font-weight:bold;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# Initialize board
-def init_board():
-    return [" " for _ in range(9)]
+# ---------- INIT ----------
+if "board" not in st.session_state:
+    st.session_state.board = [""] * 9
+    st.session_state.game_over = False
+    st.session_state.winner = None
 
-# Convert board to string (state)
-def get_state(board):
-    return "".join(board)
-
-# Available moves
-def available_moves(board):
-    return [i for i, spot in enumerate(board) if spot == " "]
-
-# Check winner
+# ---------- FUNCTIONS ----------
 def check_winner(board):
-    win_states = [
-        [0,1,2],[3,4,5],[6,7,8],
-        [0,3,6],[1,4,7],[2,5,8],
-        [0,4,8],[2,4,6]
-    ]
-    for state in win_states:
-        if board[state[0]] == board[state[1]] == board[state[2]] != " ":
-            return board[state[0]]
-    if " " not in board:
+    wins = [(0,1,2),(3,4,5),(6,7,8),
+            (0,3,6),(1,4,7),(2,5,8),
+            (0,4,8),(2,4,6)]
+    for i,j,k in wins:
+        if board[i] == board[j] == board[k] and board[i] != "":
+            return board[i]
+    if "" not in board:
         return "Draw"
     return None
 
-# Choose action
-def choose_action(state, moves):
-    if random.uniform(0,1) < epsilon:
-        return random.choice(moves)
-    qs = [Q.get((state, a), 0) for a in moves]
-    return moves[np.argmax(qs)]
+def ai_move():
+    available = [i for i in range(9) if st.session_state.board[i] == ""]
+    return random.choice(available) if available else None
 
-# Update Q-value
-def update_q(state, action, reward, next_state, next_moves):
-    old_q = Q.get((state, action), 0)
-    future_q = max([Q.get((next_state, a), 0) for a in next_moves], default=0)
-    Q[(state, action)] = old_q + alpha * (reward + gamma * future_q - old_q)
+# ---------- TITLE ----------
+st.markdown('<div class="title">🎮 Tic Tac Toe AI</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub">You: ❌ &nbsp;&nbsp; | &nbsp;&nbsp; AI: ⭕</div>', unsafe_allow_html=True)
 
-# Train agent
-def train(episodes=5000):
-    global Q
-    for _ in range(episodes):
-        board = init_board()
-        state = get_state(board)
+st.write("")
 
-        while True:
-            moves = available_moves(board)
-            action = choose_action(state, moves)
-            board[action] = "X"
-
-            winner = check_winner(board)
-            next_state = get_state(board)
-
-            if winner:
-                reward = 1 if winner == "X" else 0
-                update_q(state, action, reward, next_state, [])
-                break
-
-            # Opponent random move
-            opp_move = random.choice(available_moves(board))
-            board[opp_move] = "O"
-
-            winner = check_winner(board)
-            next_state2 = get_state(board)
-
-            if winner:
-                reward = -1 if winner == "O" else 0
-                update_q(state, action, reward, next_state2, [])
-                break
-
-            next_moves = available_moves(board)
-            update_q(state, action, 0, next_state2, next_moves)
-
-            state = next_state2
-
-    # Save Q-table
-    with open("q_table.pkl", "wb") as f:
-        pickle.dump(Q, f)
-
-# Load Q-table
-def load_q():
-    global Q
-    if os.path.exists("q_table.pkl"):
-        with open("q_table.pkl", "rb") as f:
-            Q = pickle.load(f)
-
-# AI move
-def ai_move(board):
-    state = get_state(board)
-    moves = available_moves(board)
-    qs = [Q.get((state, a), 0) for a in moves]
-    return moves[np.argmax(qs)]
-
-# Streamlit UI
-st.title("🤖 Tic-Tac-Toe RL Agent")
-
-if "board" not in st.session_state:
-    st.session_state.board = init_board()
-
-load_q()
-
-# Train button
-if st.button("Train AI"):
-    train(5000)
-    st.success("Training Complete!")
-
-# Display board
+# ---------- BOARD ----------
 cols = st.columns(3)
+
 for i in range(9):
-    if cols[i%3].button(st.session_state.board[i], key=i):
-        if st.session_state.board[i] == " ":
-            st.session_state.board[i] = "X"
+    with cols[i % 3]:
+        if st.button(st.session_state.board[i] or " ", key=i):
+            if not st.session_state.game_over and st.session_state.board[i] == "":
+                
+                # Player move
+                st.session_state.board[i] = "X"
+                result = check_winner(st.session_state.board)
 
-            winner = check_winner(st.session_state.board)
-            if not winner:
-                ai = ai_move(st.session_state.board)
-                st.session_state.board[ai] = "O"
+                # AI move
+                if not result:
+                    ai_index = ai_move()
+                    if ai_index is not None:
+                        st.session_state.board[ai_index] = "O"
+                    result = check_winner(st.session_state.board)
 
-            winner = check_winner(st.session_state.board)
-            if winner:
-                st.write(f"🏆 Result: {winner}")
+                # Check result
+                if result:
+                    st.session_state.game_over = True
+                    st.session_state.winner = result
 
-# Reset button
-if st.button("Reset Game"):
-    st.session_state.board = init_board()
+# ---------- RESULT ----------
+if st.session_state.game_over:
+    if st.session_state.winner == "Draw":
+        st.markdown('<div class="result">🤝 Draw Game</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="result">🏆 Winner: {st.session_state.winner}</div>', unsafe_allow_html=True)
+
+# ---------- RESTART ----------
+st.write("")
+if st.button("🔄 Restart Game"):
+    st.session_state.board = [""] * 9
+    st.session_state.game_over = False
+    st.session_state.winner = None
