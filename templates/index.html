@@ -1,20 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Tic Tac Toe AI</title>
+    <title>Tic Tac Toe Pro</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
 <body>
 
-<h1>🎮 Tic Tac Toe (AI First)</h1>
+<h1>🎮 Tic Tac Toe Pro</h1>
+
+<div class="controls">
+    <input type="text" id="player1" placeholder="Player 1 Name">
+    <input type="text" id="player2" placeholder="Player 2 / Computer">
+
+    <select id="mode">
+        <option value="ai">Vs Computer 🤖</option>
+        <option value="multiplayer">Multiplayer 👥</option>
+    </select>
+
+    <button onclick="startGame()">Start Game</button>
+</div>
+
+<h2 id="turn"></h2>
+<h3 id="scoreboard">Score → X: 0 | O: 0 | Draw: 0</h3>
 
 <div id="board"></div>
 
 <h2 id="result"></h2>
 
-<button onclick="restart()">Restart</button>
+<button onclick="startGame()">🔄 Restart</button>
 
 <script>
 let boardDiv = document.getElementById("board");
+let mode = "ai";
+let player1 = "Player 1";
+let player2 = "Player 2";
+
+function startGame() {
+    player1 = document.getElementById("player1").value || "Player 1";
+    player2 = document.getElementById("player2").value || "Computer";
+    mode = document.getElementById("mode").value;
+
+    fetch("/start", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({mode: mode})
+    })
+    .then(res => res.json())
+    .then(data => {
+        drawBoard(data.board);
+        document.getElementById("result").innerText = "";
+        updateScore(data.scores);
+    });
+}
 
 function drawBoard(board) {
     boardDiv.innerHTML = "";
@@ -35,23 +72,23 @@ function makeMove(i) {
     .then(res => res.json())
     .then(data => {
         drawBoard(data.board);
+        updateScore(data.scores);
+
         if (data.winner) {
-            document.getElementById("result").innerText = "Winner: " + data.winner;
+            let name = data.winner === "X" ? player1 : player2;
+            document.getElementById("result").innerText =
+                data.winner === "Draw" ? "🤝 Draw Game" : "🏆 Winner: " + name;
+        } else {
+            let turnName = data.current === "X" ? player1 : player2;
+            document.getElementById("turn").innerText = "Turn: " + turnName;
         }
     });
 }
 
-function restart() {
-    fetch("/start")
-    .then(res => res.json())
-    .then(data => {
-        drawBoard(data.board);
-        document.getElementById("result").innerText = "";
-    });
+function updateScore(scores) {
+    document.getElementById("scoreboard").innerText =
+        `Score → X: ${scores.X} | O: ${scores.O} | Draw: ${scores.draw}`;
 }
-
-// Start game
-restart();
 </script>
 
 </body>
