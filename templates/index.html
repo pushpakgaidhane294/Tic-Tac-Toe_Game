@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tic Tac Toe AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<h1>🎮 Tic Tac Toe (AI First)</h1>
+
+<div id="board"></div>
+
+<h2 id="result"></h2>
+
+<button onclick="restart()">Restart</button>
+
+<script>
+let boardDiv = document.getElementById("board");
+
+function drawBoard(board) {
+    boardDiv.innerHTML = "";
+    board.forEach((cell, i) => {
+        let btn = document.createElement("button");
+        btn.innerText = cell;
+        btn.onclick = () => makeMove(i);
+        boardDiv.appendChild(btn);
+    });
+}
+
+function makeMove(i) {
+    fetch("/move", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({move: i})
+    })
+    .then(res => res.json())
+    .then(data => {
+        drawBoard(data.board);
+        if (data.winner) {
+            document.getElementById("result").innerText = "Winner: " + data.winner;
+        }
+    });
+}
+
+function restart() {
+    fetch("/start")
+    .then(res => res.json())
+    .then(data => {
+        drawBoard(data.board);
+        document.getElementById("result").innerText = "";
+    });
+}
+
+// Start game
+restart();
+</script>
+
+</body>
+</html>
